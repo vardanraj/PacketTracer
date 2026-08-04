@@ -62,7 +62,7 @@ export default function AuthPage({ onLogin, onBack, isDarkMode = false, onToggle
         {/* Brand / Logo */}
         <div className="text-center space-y-2 mb-8">
           <div className="inline-flex h-12 w-12 rounded-xl bg-teal-500/10 border border-teal-500/30 items-center justify-center text-teal-600 dark:text-teal-400 mx-auto">
-            <Lock className="h-6 w-6" />
+            <img src="/favicon.svg" alt="Net Observer Logo" className="h-6 w-6" />
           </div>
           <h2 className="text-xl font-bold tracking-tight text-[var(--text-main)]">
             Operator <span className="text-teal-600 dark:text-teal-400">Sign-In</span>

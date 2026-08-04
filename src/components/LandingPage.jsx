@@ -14,7 +14,7 @@ export default function LandingPage({ onLaunch, isDarkMode = false, onToggleThem
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onLaunch(false)}>
             <div className="h-9 w-9 bg-teal-500/10 border border-teal-500/30 rounded-lg flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
-              <Activity className="h-5 w-5 animate-pulse" />
+              <img src="/favicon.svg" alt="Net Observer Logo" className="h-5 w-5" />
             </div>
             <span className="font-sans text-sm sm:text-base tracking-tight font-bold text-[var(--text-main)]">
               Net<span className="text-teal-600 dark:text-teal-400">Observer</span>

@@ -500,10 +500,10 @@ export default function App() {
 
               <div 
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="hidden md:flex h-9 w-9 bg-teal-500/10 border border-teal-500/30 rounded-xl items-center justify-center text-teal-600 dark:text-teal-400 cursor-pointer hover:bg-teal-500/20 transition-colors"
+                className="hidden md:flex h-9 w-9 bg-teal-500/10 border border-teal-500/30 rounded-xl items-center justify-center text-teal-600 dark:text-teal-400 cursor-pointer hover:bg-teal-500/20 transition-colors shrink-0"
                 title="Toggle Sidebar"
               >
-                <Activity className="h-4.5 w-4.5" />
+                <img src="/favicon.svg" alt="Net Observer" className="h-5 w-5" />
               </div>
               <div>
                 <h1 className="text-xs sm:text-sm font-bold text-[var(--text-main)] flex items-center gap-1.5 sm:gap-2">
@@ -626,8 +626,8 @@ export default function App() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between pb-4 border-b border-[var(--border-color)]">
                   <div className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 bg-teal-500/10 border border-teal-500/30 rounded-lg flex items-center justify-center text-teal-600 dark:text-teal-400">
-                      <Activity className="h-4.5 w-4.5" />
+                    <div className="h-8 w-8 bg-teal-500/10 border border-teal-500/30 rounded-lg flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
+                      <img src="/favicon.svg" alt="Net Observer" className="h-4.5 w-4.5" />
                     </div>
                     <div>
                       <h2 className="text-sm font-bold text-[var(--text-main)]">NetObserver</h2>
