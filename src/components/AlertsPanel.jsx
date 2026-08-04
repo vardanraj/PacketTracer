@@ -2,19 +2,12 @@ import { useMemo } from "react";
 import { 
   ShieldAlert, CheckCircle2, AlertOctagon, HelpCircle
 } from "lucide-react";
-import { Alert } from "../types";
-
-interface AlertsPanelProps {
-  alerts: Alert[];
-  onAcknowledgeAlert: (id: string) => void;
-  onClearAlerts: () => void;
-}
 
 export default function AlertsPanel({
   alerts,
   onAcknowledgeAlert,
   onClearAlerts
-}: AlertsPanelProps) {
+}) {
 
   // Unacknowledged vs. Acknowledged split
   const unacknowledged = useMemo(() => alerts.filter(a => !a.acknowledged), [alerts]);

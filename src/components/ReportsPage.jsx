@@ -3,20 +3,13 @@ import {
   FileText, Download, CheckCircle2, ShieldCheck, Calendar,
   ArrowDownToLine
 } from "lucide-react";
-import { Packet, Session, Alert } from "../types";
-
-interface ReportsPageProps {
-  packets: Packet[];
-  sessions: Session[];
-  alerts: Alert[];
-}
 
 export default function ReportsPage({
   packets,
   sessions,
   alerts
-}: ReportsPageProps) {
-  const [reportType, setReportType] = useState<"standard" | "incident" | "compliance">("standard");
+}) {
+  const [reportType, setReportType] = useState("standard");
   const [isGenerating, setIsGenerating] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
@@ -132,7 +125,7 @@ export default function ReportsPage({
                 ].map((type) => (
                   <button
                     key={type.id}
-                    onClick={() => { setReportType(type.id as any); setSuccessMsg(""); }}
+                    onClick={() => { setReportType(type.id); setSuccessMsg(""); }}
                     className={`p-3.5 rounded-xl text-left border transition-all cursor-pointer ${
                       reportType === type.id 
                         ? "bg-teal-500/10 border-teal-500 text-[var(--text-main)] font-semibold shadow-sm" 

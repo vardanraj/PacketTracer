@@ -1,24 +1,18 @@
-import React, { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { 
   UploadCloud, Terminal, Copy, Check, Info, Cpu, Database, Server
 } from "lucide-react";
-
-interface IngestionSectionProps {
-  serverState: any;
-  onModeChange: (mode: "real" | "simulation") => void;
-  onClearLogs: () => void;
-}
 
 export default function IngestionSection({
   serverState,
   onModeChange,
   onClearLogs
-}: IngestionSectionProps) {
+}) {
   const [dragActive, setDragActive] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<string>("");
+  const [uploadStatus, setUploadStatus] = useState("");
   const [copiedPython, setCopiedPython] = useState(false);
   const [copiedApi, setCopiedApi] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef(null);
 
   const pythonAgentCode = `import sys
 import json
@@ -89,7 +83,7 @@ sniff(iface=INTERFACE, prn=handle_packet, store=0)`;
   }
 }`;
 
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
@@ -99,7 +93,7 @@ sniff(iface=INTERFACE, prn=handle_packet, store=0)`;
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -109,7 +103,7 @@ sniff(iface=INTERFACE, prn=handle_packet, store=0)`;
     }
   };
 
-  const handleFiles = async (file: File) => {
+  const handleFiles = async (file) => {
     const extension = file.name.split(".").pop()?.toLowerCase();
     if (extension === "pcap" || extension === "pcapng") {
       setUploadStatus(`Processing "${file.name}"...`);
@@ -184,7 +178,7 @@ sniff(iface=INTERFACE, prn=handle_packet, store=0)`;
     fileInputRef.current?.click();
   };
 
-  const copyToClipboard = (text: string, flagSetter: (val: boolean) => void) => {
+  const copyToClipboard = (text, flagSetter) => {
     navigator.clipboard.writeText(text);
     flagSetter(true);
     setTimeout(() => flagSetter(false), 2000);

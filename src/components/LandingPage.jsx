@@ -1,13 +1,6 @@
-import React from "react";
 import { Activity, ShieldCheck, Terminal, ArrowRight, Sun, Moon, Cpu, Radio, Network } from "lucide-react";
 
-interface LandingPageProps {
-  onLaunch: (demoMode: boolean) => void;
-  isDarkMode?: boolean;
-  onToggleTheme?: () => void;
-}
-
-export default function LandingPage({ onLaunch, isDarkMode = false, onToggleTheme }: LandingPageProps) {
+export default function LandingPage({ onLaunch, isDarkMode = false, onToggleTheme }) {
   return (
     <div className="min-h-screen bg-[var(--bg-app)] text-[var(--text-main)] flex flex-col relative overflow-hidden transition-colors" id="landing-page-root">
       

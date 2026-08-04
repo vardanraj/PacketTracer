@@ -1,21 +1,14 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Lock, User, Eye, EyeOff, ShieldCheck, Terminal, AlertCircle, ArrowRight, Sun, Moon } from "lucide-react";
 
-interface AuthPageProps {
-  onLogin: (username: string, isDemo: boolean) => void;
-  onBack: () => void;
-  isDarkMode?: boolean;
-  onToggleTheme?: () => void;
-}
-
-export default function AuthPage({ onLogin, onBack, isDarkMode = false, onToggleTheme }: AuthPageProps) {
+export default function AuthPage({ onLogin, onBack, isDarkMode = false, onToggleTheme }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!username.trim()) {
       setError("Please provide a valid operator identity code.");

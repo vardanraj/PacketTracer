@@ -1,16 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { 
   Settings, Save, Key, HardDrive, ShieldCheck, EyeOff
 } from "lucide-react";
 
-interface SettingsPageProps {
-  serverState: any;
-  onClearLogs: () => void;
-}
-
 export default function SettingsPage({
   onClearLogs
-}: SettingsPageProps) {
+}) {
   const [retentionCount, setRetentionCount] = useState("5000");
   const [anonymizeIps, setAnonymizeIps] = useState(false);
   const [redactHeaders, setRedactHeaders] = useState(true);
@@ -18,7 +13,7 @@ export default function SettingsPage({
   const [showApiKey, setShowApiKey] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = (e) => {
     e.preventDefault();
     setIsSaved(true);
     setTimeout(() => {

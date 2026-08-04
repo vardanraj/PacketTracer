@@ -2,18 +2,12 @@ import { useState, useMemo } from "react";
 import { 
   CheckCircle, Info, Filter
 } from "lucide-react";
-import { Packet } from "../types";
-
-interface ProtocolInspectionProps {
-  packets: Packet[];
-  onSelectPacket: (packet: Packet) => void;
-}
 
 export default function ProtocolInspection({
   packets,
   onSelectPacket
-}: ProtocolInspectionProps) {
-  const [activeTab, setActiveTab] = useState<"TCP" | "UDP" | "IP" | "HTTP" | "HTTPS">("TCP");
+}) {
+  const [activeTab, setActiveTab] = useState("TCP");
 
   // Filter packets by selected tab protocol
   const protocolPackets = useMemo(() => {
@@ -43,7 +37,7 @@ export default function ProtocolInspection({
       
       {/* Protocol Tabs Selector */}
       <div className="app-card p-3 flex flex-wrap gap-2" id="protocol-tab-selector">
-        {(["TCP", "UDP", "IP", "HTTP", "HTTPS"] as const).map((proto) => {
+        {["TCP", "UDP", "IP", "HTTP", "HTTPS"].map((proto) => {
           const count = packets.filter(p => p.protocol.toUpperCase() === proto).length;
           const isActive = activeTab === proto;
           return (

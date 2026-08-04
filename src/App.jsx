@@ -6,23 +6,22 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
-// Types & Mock Data imports
-import { Packet, NetworkInterface, CaptureStats, ServerState, Device, Session, Alert } from "./types";
-import { MOCK_DEVICES, MOCK_SESSIONS, MOCK_ALERTS, MOCK_PACKETS } from "./data/mockData";
+// Mock Data imports
+import { MOCK_DEVICES, MOCK_SESSIONS, MOCK_ALERTS, MOCK_PACKETS } from "./data/mockData.js";
 
 // Modular sub-views
-import LandingPage from "./components/LandingPage";
-import AuthPage from "./components/AuthPage";
-import DashboardOverview from "./components/DashboardOverview";
-import IngestionSection from "./components/IngestionSection";
-import ProtocolInspection from "./components/ProtocolInspection";
-import AlertsPanel from "./components/AlertsPanel";
+import LandingPage from "./components/LandingPage.jsx";
+import AuthPage from "./components/AuthPage.jsx";
+import DashboardOverview from "./components/DashboardOverview.jsx";
+import IngestionSection from "./components/IngestionSection.jsx";
+import ProtocolInspection from "./components/ProtocolInspection.jsx";
+import AlertsPanel from "./components/AlertsPanel.jsx";
 
 // Lazy-loaded telemetry modules
-const DeviceExplorer = lazy(() => import("./components/DeviceExplorer"));
-const ReportsPage = lazy(() => import("./components/ReportsPage"));
-const SettingsPage = lazy(() => import("./components/SettingsPage"));
-const DocumentationPage = lazy(() => import("./components/DocumentationPage"));
+const DeviceExplorer = lazy(() => import("./components/DeviceExplorer.jsx"));
+const ReportsPage = lazy(() => import("./components/ReportsPage.jsx"));
+const SettingsPage = lazy(() => import("./components/SettingsPage.jsx"));
+const DocumentationPage = lazy(() => import("./components/DocumentationPage.jsx"));
 
 const PROTO_COLORS = {
   TCP: "#0284c7",     // Sky Blue
@@ -36,7 +35,7 @@ const PROTO_COLORS = {
 
 export default function App() {
   // Theme State (Light by default, toggleable to dark)
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
+  const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("theme") === "dark" || 
       window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
@@ -56,28 +55,28 @@ export default function App() {
   };
 
   // Navigation & Auth Flow States
-  const [showLanding, setShowLanding] = useState<boolean>(true);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [operatorName, setOperatorName] = useState<string>("");
-  const [currentView, setCurrentView] = useState<"dashboard" | "capture" | "explorer" | "protocols" | "alerts" | "reports" | "settings" | "docs">("dashboard");
+  const [showLanding, setShowLanding] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [operatorName, setOperatorName] = useState("");
+  const [currentView, setCurrentView] = useState("dashboard");
 
   // Client Customization / Personalization States
-  const [isCompact, setIsCompact] = useState<boolean>(false);
-  const [focusMode, setFocusMode] = useState<boolean>(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState<boolean>(false);
-  const [paletteQuery, setPaletteQuery] = useState<string>("");
-  const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(() => {
+  const [isCompact, setIsCompact] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState("");
+  const [onboardingDismissed, setOnboardingDismissed] = useState(() => {
     return localStorage.getItem("onboarding_dismissed") === "true";
   });
-  const [activeNotification, setActiveNotification] = useState<string | null>(null);
+  const [activeNotification, setActiveNotification] = useState(null);
 
   // Ingested Real-Time Stream States
-  const [packets, setPackets] = useState<Packet[]>([]);
-  const [stats, setStats] = useState<CaptureStats | null>(null);
-  const [, setInterfaces] = useState<NetworkInterface[]>([]);
-  const [serverState, setServerState] = useState<ServerState>({
+  const [packets, setPackets] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [, setInterfaces] = useState([]);
+  const [serverState, setServerState] = useState({
     isCapturing: true,
     selectedInterface: "en0 (Wi-Fi)",
     captureMode: "simulation",
@@ -85,31 +84,31 @@ export default function App() {
   });
 
   // Database seed states
-  const [devices, setDevices] = useState<Device[]>(MOCK_DEVICES);
-  const [sessions, setSessions] = useState<Session[]>(MOCK_SESSIONS);
-  const [alerts, setAlerts] = useState<Alert[]>(MOCK_ALERTS);
+  const [devices, setDevices] = useState(MOCK_DEVICES);
+  const [sessions, setSessions] = useState(MOCK_SESSIONS);
+  const [alerts, setAlerts] = useState(MOCK_ALERTS);
 
   // Client Control UI States
-  const [selectedProtocol, setSelectedProtocol] = useState<string>("ALL");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [selectedPacket, setSelectedPacket] = useState<Packet | null>(null);
-  const [isPaused, setIsPaused] = useState<boolean>(false);
-  const isPausedRef = useRef<boolean>(false);
+  const [selectedProtocol, setSelectedProtocol] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPacket, setSelectedPacket] = useState(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const isPausedRef = useRef(false);
   useEffect(() => {
     isPausedRef.current = isPaused;
   }, [isPaused]);
 
-  const [autoScroll] = useState<boolean>(true);
-  const [wsConnected, setWsConnected] = useState<boolean>(false);
-  const [inspectorTab, setInspectorTab] = useState<"headers" | "hexdump" | "raw">("headers");
+  const [autoScroll] = useState(true);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [inspectorTab, setInspectorTab] = useState("headers");
 
   // References
-  const wsRef = useRef<WebSocket | null>(null);
-  const tableEndRef = useRef<HTMLDivElement | null>(null);
+  const wsRef = useRef(null);
+  const tableEndRef = useRef(null);
 
   // Global Keyboard Shortcut for Command Palette
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
         setCommandPaletteOpen((prev) => !prev);
@@ -310,7 +309,7 @@ export default function App() {
     }
   };
 
-  const handleModeChange = async (mode: "real" | "simulation") => {
+  const handleModeChange = async (mode) => {
     try {
       const res = await fetch("/api/capture/start", {
         method: "POST",
@@ -348,7 +347,7 @@ export default function App() {
     }
   };
 
-  const handleAcknowledgeAlert = async (id: string) => {
+  const handleAcknowledgeAlert = async (id) => {
     try {
       await fetch(`/api/alerts/${id}/acknowledge`, { 
         method: "POST",
@@ -379,7 +378,7 @@ export default function App() {
   };
 
   // Auth Triggers
-  const handleAuthLaunch = (guestMode: boolean) => {
+  const handleAuthLaunch = (guestMode) => {
     if (guestMode) {
       setOperatorName("guest-playground");
       setIsAuthenticated(true);
@@ -389,7 +388,7 @@ export default function App() {
     }
   };
 
-  const handleLogin = (name: string, isDemo: boolean) => {
+  const handleLogin = (name, isDemo) => {
     setOperatorName(isDemo ? "demo-operator" : name);
     setIsAuthenticated(true);
   };
@@ -423,7 +422,7 @@ export default function App() {
   const renderedHexDump = useMemo(() => {
     if (!selectedPacket) return "";
 
-    if (selectedPacket.details.raw_hex_preview && selectedPacket.details.raw_ascii_preview) {
+    if (selectedPacket.details && selectedPacket.details.raw_hex_preview && selectedPacket.details.raw_ascii_preview) {
       const hexBytes = selectedPacket.details.raw_hex_preview.replace(/\.\.\./, "").split(" ");
       const asciiChars = selectedPacket.details.raw_ascii_preview.replace(/\.\.\./, "");
       
@@ -440,7 +439,7 @@ export default function App() {
     const mockBytes = [];
     mockBytes.push(...[0x00, 0x0c, 0x29, 0xab, 0xcd, 0xef, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x08, 0x00]);
     mockBytes.push(...[0x45, 0x00, (selectedPacket.size >> 8) & 0xff, selectedPacket.size & 0xff]);
-    mockBytes.push(...[0x1a, 0x2b, 0x40, 0x00, selectedPacket.details.ip_ttl || 64, 0x06, 0x00, 0x00]);
+    mockBytes.push(...[0x1a, 0x2b, 0x40, 0x00, selectedPacket.details?.ip_ttl || 64, 0x06, 0x00, 0x00]);
     
     const srcParts = selectedPacket.src_ip.split(".").map(Number);
     if (srcParts.length === 4) mockBytes.push(...srcParts);
@@ -474,7 +473,7 @@ export default function App() {
     return <AuthPage onLogin={handleLogin} onBack={() => setShowLanding(true)} />;
   }
 
-  const executeCommand = (action: () => void) => {
+  const executeCommand = (action) => {
     action();
     setCommandPaletteOpen(false);
     setPaletteQuery("");
@@ -609,7 +608,6 @@ export default function App() {
       <AnimatePresence>
         {mobileNavOpen && (
           <div className="fixed inset-0 z-50 md:hidden flex">
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -618,7 +616,6 @@ export default function App() {
               className="fixed inset-0 bg-black/60 backdrop-blur-xs"
             />
 
-            {/* Drawer */}
             <motion.div
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
@@ -661,7 +658,7 @@ export default function App() {
                       <button
                         key={nav.id}
                         onClick={() => {
-                          setCurrentView(nav.id as any);
+                          setCurrentView(nav.id);
                           setSelectedPacket(null);
                           setMobileNavOpen(false);
                         }}
@@ -778,7 +775,7 @@ export default function App() {
                 return (
                   <button
                     key={nav.id}
-                    onClick={() => { setCurrentView(nav.id as any); setSelectedPacket(null); }}
+                    onClick={() => { setCurrentView(nav.id); setSelectedPacket(null); }}
                     className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-3 cursor-pointer ${
                       isActive 
                         ? "bg-teal-600 text-white font-bold shadow-sm" 
@@ -986,7 +983,7 @@ export default function App() {
           <div className="md:hidden space-y-2 pb-2">
             {filteredPackets.length > 0 ? (
               filteredPackets.map((pkt) => {
-                const color = PROTO_COLORS[pkt.protocol as keyof typeof PROTO_COLORS] || PROTO_COLORS.OTHER;
+                const color = PROTO_COLORS[pkt.protocol] || PROTO_COLORS.OTHER;
                 const isSelected = selectedPacket?.id === pkt.id;
                 return (
                   <div
@@ -1048,7 +1045,7 @@ export default function App() {
             <tbody className="divide-y divide-[var(--border-color)] text-[var(--text-main)]">
               {filteredPackets.length > 0 ? (
                 filteredPackets.map((pkt) => {
-                  const color = PROTO_COLORS[pkt.protocol as keyof typeof PROTO_COLORS] || PROTO_COLORS.OTHER;
+                  const color = PROTO_COLORS[pkt.protocol] || PROTO_COLORS.OTHER;
                   const isSelected = selectedPacket?.id === pkt.id;
                   return (
                     <tr 
@@ -1152,7 +1149,7 @@ export default function App() {
                   ].map((t) => (
                     <button
                       key={t.id}
-                      onClick={() => setInspectorTab(t.id as any)}
+                      onClick={() => setInspectorTab(t.id)}
                       className={`text-xs px-3 py-1.5 font-semibold transition-all cursor-pointer flex-1 text-center rounded-lg ${
                         inspectorTab === t.id 
                           ? "bg-teal-600 text-white shadow-xs" 
@@ -1211,15 +1208,15 @@ export default function App() {
                       </div>
                       <div className="flex justify-between py-1 border-b border-[var(--border-color)]">
                         <span className="text-[var(--text-muted)]">IP Version:</span> 
-                        <span className="text-[var(--text-main)]">IPv{selectedPacket.details.ip_version || 4}</span>
+                        <span className="text-[var(--text-main)]">IPv{selectedPacket.details?.ip_version || 4}</span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-[var(--border-color)]">
                         <span className="text-[var(--text-muted)]">Time-To-Live:</span> 
-                        <span className="text-[var(--text-main)]">{selectedPacket.details.ip_ttl || 64} hops</span>
+                        <span className="text-[var(--text-main)]">{selectedPacket.details?.ip_ttl || 64} hops</span>
                       </div>
                       <div className="flex justify-between py-1">
                         <span className="text-[var(--text-muted)]">Identifier:</span> 
-                        <span className="text-[var(--text-main)]">0x{selectedPacket.details.ip_id?.toString(16).toUpperCase() || "N/A"}</span>
+                        <span className="text-[var(--text-main)]">0x{selectedPacket.details?.ip_id?.toString(16).toUpperCase() || "N/A"}</span>
                       </div>
                     </div>
 
@@ -1239,19 +1236,19 @@ export default function App() {
                             <span className="text-[var(--text-muted)]">Destination Port:</span> 
                             <span className="text-[var(--text-main)]">{selectedPacket.dst_port}</span>
                           </div>
-                          {selectedPacket.details.tcp_flags && (
+                          {selectedPacket.details?.tcp_flags && (
                             <div className="flex justify-between py-1 border-b border-[var(--border-color)]">
                               <span className="text-[var(--text-muted)]">TCP Flags:</span> 
                               <span className="text-amber-600 dark:text-amber-400 font-bold tracking-wider">{selectedPacket.details.tcp_flags}</span>
                             </div>
                           )}
-                          {selectedPacket.details.tcp_seq !== undefined && (
+                          {selectedPacket.details?.tcp_seq !== undefined && (
                             <div className="flex justify-between py-1 border-b border-[var(--border-color)]">
                               <span className="text-[var(--text-muted)]">Sequence Number:</span> 
                               <span className="text-[var(--text-main)]">{selectedPacket.details.tcp_seq}</span>
                             </div>
                           )}
-                          {selectedPacket.details.tcp_ack !== undefined && (
+                          {selectedPacket.details?.tcp_ack !== undefined && (
                             <div className="flex justify-between py-1">
                               <span className="text-[var(--text-muted)]">Acknowledgment:</span> 
                               <span className="text-[var(--text-main)]">{selectedPacket.details.tcp_ack}</span>
@@ -1273,7 +1270,7 @@ export default function App() {
                         <span className="text-[var(--text-muted)]">Payload Size:</span> 
                         <span className="text-[var(--text-main)] font-bold">{selectedPacket.size} Bytes</span>
                       </div>
-                      {selectedPacket.details.http_info ? (
+                      {selectedPacket.details?.http_info ? (
                         <>
                           <div className="flex justify-between py-1 border-b border-[var(--border-color)]">
                             <span className="text-[var(--text-muted)]">Payload Type:</span> 
@@ -1418,7 +1415,7 @@ export default function App() {
                 ].filter(cmd => cmd.name.toLowerCase().includes(paletteQuery.toLowerCase())).map((cmd, i) => (
                   <button
                     key={i}
-                    onClick={() => executeCommand(() => { setCurrentView(cmd.view as any); setSelectedPacket(null); })}
+                    onClick={() => executeCommand(() => { setCurrentView(cmd.view); setSelectedPacket(null); })}
                     className="w-full text-left px-3 py-2 rounded-xl hover:bg-[var(--bg-card-muted)] text-[var(--text-main)] flex items-center justify-between cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-3">

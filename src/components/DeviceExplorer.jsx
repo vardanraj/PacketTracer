@@ -2,22 +2,15 @@ import { useState, useMemo } from "react";
 import { 
   ArrowRight, Network, Clock
 } from "lucide-react";
-import { Device, Session, Packet } from "../types";
-
-interface DeviceExplorerProps {
-  devices: Device[];
-  sessions: Session[];
-  packets: Packet[];
-}
 
 export default function DeviceExplorer({
   devices,
   sessions,
   packets
-}: DeviceExplorerProps) {
-  const [selectedSource, setSelectedSource] = useState<string>("ALL");
-  const [selectedDest, setSelectedDest] = useState<string>("ALL");
-  const [selectedProto, setSelectedProto] = useState<string>("ALL");
+}) {
+  const [selectedSource, setSelectedSource] = useState("ALL");
+  const [selectedDest, setSelectedDest] = useState("ALL");
+  const [selectedProto, setSelectedProto] = useState("ALL");
 
   // Filter sessions based on selections
   const filteredSessions = useMemo(() => {

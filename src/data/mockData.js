@@ -1,6 +1,4 @@
-import { Device, Session, Alert, Packet } from "../types";
-
-export const MOCK_DEVICES: Device[] = [
+export const MOCK_DEVICES = [
   {
     id: "dev-01",
     hostname: "sec-admin-laptop",
@@ -60,11 +58,11 @@ export const MOCK_DEVICES: Device[] = [
 ];
 
 // Helper to generate timestamps relative to current time
-const getPastTime = (secondsAgo: number) => {
+const getPastTime = (secondsAgo) => {
   return (Date.now() / 1000) - secondsAgo;
 };
 
-export const MOCK_SESSIONS: Session[] = [
+export const MOCK_SESSIONS = [
   {
     id: "sess-01",
     sourceDevice: "sec-admin-laptop",
@@ -119,7 +117,7 @@ export const MOCK_SESSIONS: Session[] = [
     startTime: getPastTime(600),
     packetCount: 3,
     bytesTransferred: 180,
-    status: "failed", // Failed connection handshake
+    status: "failed",
   },
   {
     id: "sess-05",
@@ -137,7 +135,7 @@ export const MOCK_SESSIONS: Session[] = [
   }
 ];
 
-export const MOCK_ALERTS: Alert[] = [
+export const MOCK_ALERTS = [
   {
     id: "alt-01",
     type: "failure",
@@ -179,7 +177,7 @@ export const MOCK_ALERTS: Alert[] = [
   }
 ];
 
-export const MOCK_PACKETS: Packet[] = [
+export const MOCK_PACKETS = [
   {
     id: "pkt-001",
     timestamp: getPastTime(3600),

@@ -3,15 +3,14 @@ import path from "path";
 import { createServer as createHttpServer } from "http";
 import { WebSocket, WebSocketServer } from "ws";
 import { createServer as createViteServer } from "vite";
-import { Packet, NetworkInterface, CaptureStats, ServerState, Device, Session, Alert } from "./src/types.js";
 import { MOCK_DEVICES, MOCK_SESSIONS, MOCK_ALERTS, MOCK_PACKETS } from "./src/data/mockData.js";
 import { authenticateCaptureAgent } from "./src/lib/services/agent-ingestion.js";
 
 // Structured Logger
 const Logger = {
-  info: (msg: string, ctx?: any) => console.log(`[INFO] [${new Date().toISOString()}] ${msg}`, ctx ? JSON.stringify(ctx) : ""),
-  warn: (msg: string, ctx?: any) => console.warn(`[WARN] [${new Date().toISOString()}] ${msg}`, ctx ? JSON.stringify(ctx) : ""),
-  error: (msg: string, ctx?: any) => console.error(`[ERROR] [${new Date().toISOString()}] ${msg}`, ctx ? JSON.stringify(ctx) : "")
+  info: (msg, ctx) => console.log(`[INFO] [${new Date().toISOString()}] ${msg}`, ctx ? JSON.stringify(ctx) : ""),
+  warn: (msg, ctx) => console.warn(`[WARN] [${new Date().toISOString()}] ${msg}`, ctx ? JSON.stringify(ctx) : ""),
+  error: (msg, ctx) => console.error(`[ERROR] [${new Date().toISOString()}] ${msg}`, ctx ? JSON.stringify(ctx) : "")
 };
 
 // Initialize Express and HTTP Server
@@ -44,11 +43,11 @@ app.use((req, res, next) => {
 });
 
 // In-Memory Rate Limiter Middleware
-const rateLimits = new Map<string, { count: number; resetTime: number }>();
+const rateLimits = new Map();
 const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 200; // Max 200 requests per minute
 
-function rateLimiter(req: express.Request, res: express.Response, next: express.NextFunction) {
+function rateLimiter(req, res, next) {
   const ip = req.ip || req.socket.remoteAddress || "unknown";
   const now = Date.now();
   const client = rateLimits.get(ip);
@@ -79,19 +78,19 @@ setInterval(() => {
 }, 600000);
 
 // JWT-ready authentication hook (without implementing login system)
-function authHook(req: express.Request, res: express.Response, next: express.NextFunction) {
+function authHook(req, res, next) {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.substring(7);
-    // JWT validation logic can go here (e.g., jwt.verify(token))
-    (req as any).user = { token, simulated: true, role: "operator" };
+    // JWT validation logic can go here
+    req.user = { token, simulated: true, role: "operator" };
   }
   next();
 }
 app.use(authHook);
 
 // Enforce real authentication for state-mutating API routes
-function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   const expectedToken = process.env.API_TOKEN || "demo-token-12345";
   
@@ -110,10 +109,10 @@ function requireAuth(req: express.Request, res: express.Response, next: express.
 }
 
 // In-Memory Databases seeded at boot
-let packetsDb: Packet[] = [...MOCK_PACKETS];
-let devicesDb: Device[] = [...MOCK_DEVICES];
-let sessionsDb: Session[] = [...MOCK_SESSIONS];
-let alertsDb: Alert[] = [...MOCK_ALERTS];
+let packetsDb = [...MOCK_PACKETS];
+let devicesDb = [...MOCK_DEVICES];
+let sessionsDb = [...MOCK_SESSIONS];
+let alertsDb = [...MOCK_ALERTS];
 
 const MAX_PACKETS_RETENTION = 5000; // Limit memory usage
 const MAX_SESSIONS_RETENTION = 1000;
@@ -121,7 +120,7 @@ const MAX_ALERTS_RETENTION = 1000;
 const MAX_DEVICES_RETENTION = 1000;
 
 // Server State
-const state: ServerState = {
+const state = {
   isCapturing: true, // Start in capturing mode for simulation by default
   selectedInterface: "en0 (Wi-Fi)",
   captureMode: "simulation",
@@ -129,11 +128,11 @@ const state: ServerState = {
 };
 
 // WebSocket Client Collections
-const dashboardClients = new Set<WebSocket>();
-const agentClients = new Map<WebSocket, { name: string; interface: string }>();
+const dashboardClients = new Set();
+const agentClients = new Map();
 
 // Available Interfaces (Mock list representing typical network host interfaces)
-const availableInterfaces: NetworkInterface[] = [
+const availableInterfaces = [
   { name: "en0 (Wi-Fi)", description: "Broadcom 802.11ac Wi-Fi Adapter", status: "up", type: "wifi", ip: "192.168.1.142" },
   { name: "eth0 (Ethernet)", description: "Intel Gigabit Ethernet Controller", status: "up", type: "ethernet", ip: "192.168.1.2" },
   { name: "lo0 (Loopback)", description: "Software Loopback Interface", status: "up", type: "loopback", ip: "127.0.0.1" },
@@ -144,7 +143,7 @@ const availableInterfaces: NetworkInterface[] = [
 const generateId = () => Math.random().toString(36).substring(2, 11);
 
 // Sanitize & Truncate helper to secure metadata against script injection and heavy payloads
-function sanitizeString(str: string | undefined): string {
+function sanitizeString(str) {
   if (!str) return "";
   return str
     .replace(/&/g, "&amp;")
@@ -155,7 +154,7 @@ function sanitizeString(str: string | undefined): string {
     .replace(/\//g, "&#x2F;");
 }
 
-function sanitizePacket(packet: Omit<Packet, "id">): Omit<Packet, "id"> {
+function sanitizePacket(packet) {
   const sanitized = { ...packet };
   sanitized.info = sanitizeString(sanitized.info);
   sanitized.src_ip = sanitizeString(sanitized.src_ip);
@@ -182,9 +181,9 @@ function sanitizePacket(packet: Omit<Packet, "id">): Omit<Packet, "id"> {
 }
 
 // Helper to add packet and maintain database limit
-function addPacket(packet: Omit<Packet, "id">): Packet {
+function addPacket(packet) {
   const sanitized = sanitizePacket(packet);
-  const newPacket: Packet = {
+  const newPacket = {
     ...sanitized,
     id: generateId(),
   };
@@ -200,7 +199,6 @@ function addPacket(packet: Omit<Packet, "id">): Packet {
 }
 
 // SIMULATOR TRAFFIC GENERATOR
-// Simulates highly realistic network traffic for demonstration / offline testing
 const simulatedIps = [
   "192.168.1.142", // Local client (us)
   "192.168.1.1",   // Router / Gateway
@@ -224,7 +222,7 @@ const simulatedDomains = [
   "pool.ntp.org"
 ];
 
-let simulationInterval: NodeJS.Timeout | null = null;
+let simulationInterval = null;
 
 function startSimulation() {
   if (simulationInterval) return;
@@ -237,7 +235,7 @@ function startSimulation() {
     const burstCount = Math.floor(Math.random() * 3) + 1;
 
     for (let i = 0; i < burstCount; i++) {
-      const protocols: Packet["protocol"][] = ["TCP", "UDP", "ICMP", "HTTP", "HTTPS", "DNS"];
+      const protocols = ["TCP", "UDP", "ICMP", "HTTP", "HTTPS", "DNS"];
       const protocol = protocols[Math.floor(Math.random() * protocols.length)];
 
       const isOutgoing = Math.random() > 0.4;
@@ -247,11 +245,11 @@ function startSimulation() {
       // Prevent identical source and destination
       if (src_ip === dst_ip) continue;
 
-      let src_port: number | null = Math.floor(Math.random() * 55000) + 1024;
-      let dst_port: number | null = Math.floor(Math.random() * 55000) + 1024;
+      let src_port = Math.floor(Math.random() * 55000) + 1024;
+      let dst_port = Math.floor(Math.random() * 55000) + 1024;
       let size = Math.floor(Math.random() * 1400) + 64; // Ether payload sizes
       let info = "";
-      const details: Packet["details"] = {};
+      const details = {};
 
       const now = new Date();
       const formatted_time = now.toISOString().replace("T", " ").replace("Z", "").slice(0, -1);
@@ -298,7 +296,6 @@ function startSimulation() {
           break;
 
         case "TCP":
-          // Random TCP traffic, flags syn/ack/rst
           const isSyn = Math.random() > 0.8;
           const isFin = !isSyn && Math.random() > 0.8;
           const tcpFlags = isSyn ? "SYN" : isFin ? "FIN+ACK" : "ACK";
@@ -309,8 +306,7 @@ function startSimulation() {
           break;
 
         case "UDP":
-          // UDP Media streaming or generic UDP payload
-          src_port = isOutgoing ? 5004 : src_port; // RTP streaming port typically
+          src_port = isOutgoing ? 5004 : src_port;
           dst_port = isOutgoing ? dst_port : 5004;
           info = `UDP Payload size=${size} bytes`;
           details.udp_len = size - 28;
@@ -321,13 +317,12 @@ function startSimulation() {
           src_port = null;
           dst_port = null;
           const isRequest = Math.random() > 0.5;
-          details.icmp_type = isRequest ? 8 : 0; // Echo request/reply
+          details.icmp_type = isRequest ? 8 : 0;
           details.icmp_code = 0;
           info = isRequest ? `Echo (ping) request id=0x1a4b seq=256 ttl=64` : `Echo (ping) reply id=0x1a4b seq=256 ttl=54`;
           break;
       }
 
-      // Add fields
       details.ip_version = 4;
       details.ip_ttl = Math.floor(Math.random() * 64) + 60;
       details.ip_id = Math.floor(Math.random() * 65535);
@@ -345,10 +340,9 @@ function startSimulation() {
         details,
       });
 
-      // Broadcast to connected dashboard clients
       broadcastPacket(packet);
     }
-  }, 350); // Generates packs every ~350ms
+  }, 350);
 }
 
 function stopSimulation() {
@@ -360,14 +354,12 @@ function stopSimulation() {
 }
 
 // WebSocket batched packet broadcast buffer
-let packetBroadcastQueue: Packet[] = [];
-const BATCH_INTERVAL_MS = 150; // Batch broadcast every 150ms
+let packetBroadcastQueue = [];
+const BATCH_INTERVAL_MS = 150;
 
-// Batch broadcast interval timer
 const broadcastInterval = setInterval(() => {
   if (packetBroadcastQueue.length === 0) return;
   
-  // Backpressure safety check: take at most the latest 200 packets to send in a single batch
   const packetsToBroadcast = packetBroadcastQueue.slice(-200);
   packetBroadcastQueue = [];
 
@@ -375,8 +367,7 @@ const broadcastInterval = setInterval(() => {
 
   dashboardClients.forEach((ws) => {
     if (ws.readyState === WebSocket.OPEN) {
-      // Gracefully handle backpressure for slow client sockets (skip broadcast if bufferedAmount > 1MB)
-      const buffered = (ws as any).bufferedAmount || 0;
+      const buffered = ws.bufferedAmount || 0;
       if (buffered > 1024 * 1024) {
         Logger.warn("Skipping packet batch broadcast to slow dashboard client to prevent memory overflow.");
         return;
@@ -390,13 +381,10 @@ const broadcastInterval = setInterval(() => {
   });
 }, BATCH_INTERVAL_MS);
 
-// WebSocket packet broadcast helper
-function broadcastPacket(packet: Packet) {
-  // Push packet to the broadcast batching queue
+function broadcastPacket(packet) {
   packetBroadcastQueue.push(packet);
 }
 
-// Broadcast general status update to all connected dashboard client WebSockets
 function broadcastStatus() {
   const payload = JSON.stringify({
     type: "status_update",
@@ -421,22 +409,19 @@ function broadcastStatus() {
 // Set up WebSocket Server
 const wss = new WebSocketServer({ noServer: true });
 
-// Attach WS server upgrade logic
 httpServer.on("upgrade", (request, socket, head) => {
   wss.handleUpgrade(request, socket, head, (ws) => {
     wss.emit("connection", ws, request);
   });
 });
 
-// WebSocket connection management with Heartbeat (ping/pong)
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach((ws) => {
-    const socket = ws as any;
-    if (socket.isAlive === false) {
+    if (ws.isAlive === false) {
       Logger.info("Terminating unresponsive, dead WebSocket connection.");
       return ws.terminate();
     }
-    socket.isAlive = false;
+    ws.isAlive = false;
     try {
       ws.ping();
     } catch (e) {
@@ -449,19 +434,16 @@ const heartbeatInterval = setInterval(() => {
 wss.on("connection", (ws) => {
   Logger.info("New WebSocket connection established.");
   
-  const socket = ws as any;
-  socket.isAlive = true;
+  ws.isAlive = true;
   
   ws.on("pong", () => {
-    socket.isAlive = true;
+    ws.isAlive = true;
   });
 
-  // By default, add to dashboard subscriptions until registered as an agent
   dashboardClients.add(ws);
 
   ws.on("message", (message) => {
     try {
-      // Validate incoming message structure
       const rawData = message.toString();
       if (!rawData || rawData.length > 100000) {
         Logger.warn("Blocked excessively large incoming WebSocket message payload.");
@@ -474,13 +456,12 @@ wss.on("connection", (ws) => {
         return;
       }
 
-      // 1. Handshake from the Python Capture Agent
       if (data.type === "agent_handshake") {
         const agentName = sanitizeString(data.agent_name || "Python Capture Agent");
         const agentInterface = sanitizeString(data.interface || "unknown");
         const secretToken = sanitizeString(data.token || data.agent_token || "");
         
-        const remoteIp = (ws as any)._socket?.remoteAddress || "127.0.0.1";
+        const remoteIp = ws._socket?.remoteAddress || "127.0.0.1";
         const isAuth = authenticateCaptureAgent({
           agentName,
           secretToken,
@@ -497,7 +478,6 @@ wss.on("connection", (ws) => {
         
         Logger.info(`Registering Capture Agent: ${agentName} on interface ${agentInterface}`);
         
-        // Remove from dashboard clients, add to agent map
         dashboardClients.delete(ws);
         agentClients.set(ws, {
           name: agentName,
@@ -506,7 +486,6 @@ wss.on("connection", (ws) => {
         
         state.connectedAgents = Array.from(agentClients.values()).map(a => `${a.name} (${a.interface})`);
         
-        // If an agent joins, switch the capture mode to 'real' if in default simulation
         if (state.captureMode === "simulation") {
           state.captureMode = "real";
           stopSimulation();
@@ -516,13 +495,11 @@ wss.on("connection", (ws) => {
         return;
       }
 
-      // 2. Streamed packet from registered Python Capture Agent
       if (data.type === "packet" && agentClients.has(ws)) {
         if (!data.packet || typeof data.packet !== "object") {
           Logger.warn("Received malformed packet from capture agent, discarding.");
           return;
         }
-        // Enqueue to db and broadcast to all frontend dashboards
         const storedPacket = addPacket(data.packet);
         broadcastPacket(storedPacket);
         return;
@@ -540,7 +517,6 @@ wss.on("connection", (ws) => {
       agentClients.delete(ws);
       state.connectedAgents = Array.from(agentClients.values()).map(a => `${a.name} (${a.interface})`);
       
-      // If we lose real agent, switch back to simulation so visual graph stays active
       if (agentClients.size === 0) {
         state.captureMode = "simulation";
         if (state.isCapturing) {
@@ -560,7 +536,6 @@ wss.on("connection", (ws) => {
 });
 
 // REST API ENDPOINTS
-// GET /api/status - Current capture state
 app.get("/api/status", (req, res) => {
   res.json({
     isCapturing: state.isCapturing,
@@ -570,17 +545,14 @@ app.get("/api/status", (req, res) => {
   });
 });
 
-// GET /api/interfaces - List interfaces
 app.get("/api/interfaces", (req, res) => {
   res.json(availableInterfaces);
 });
 
-// GET /api/devices - Get all devices
 app.get("/api/devices", (req, res) => {
   res.json(devicesDb);
 });
 
-// GET /api/devices/:id - Get device by ID
 app.get("/api/devices/:id", (req, res) => {
   const device = devicesDb.find(d => d.id === req.params.id);
   if (!device) {
@@ -589,13 +561,12 @@ app.get("/api/devices/:id", (req, res) => {
   res.json(device);
 });
 
-// POST /api/devices - Create/Add device
 app.post("/api/devices", requireAuth, (req, res) => {
   const { hostname, ipAddress, macAddress, status, tags } = req.body;
   if (!hostname || !ipAddress || !macAddress) {
     return res.status(400).json({ error: "Missing required fields: hostname, ipAddress, macAddress" });
   }
-  const newDevice: Device = {
+  const newDevice = {
     id: `dev-${generateId()}`,
     hostname: sanitizeString(hostname),
     ipAddress: sanitizeString(ipAddress),
@@ -610,12 +581,10 @@ app.post("/api/devices", requireAuth, (req, res) => {
   res.status(201).json(newDevice);
 });
 
-// GET /api/sessions - Get all sessions
 app.get("/api/sessions", (req, res) => {
   res.json(sessionsDb);
 });
 
-// GET /api/sessions/:id - Get session by ID
 app.get("/api/sessions/:id", (req, res) => {
   const session = sessionsDb.find(s => s.id === req.params.id);
   if (!session) {
@@ -624,13 +593,12 @@ app.get("/api/sessions/:id", (req, res) => {
   res.json(session);
 });
 
-// POST /api/sessions - Create/Add session
 app.post("/api/sessions", requireAuth, (req, res) => {
   const { sourceDevice, destinationDevice, protocol, sourceIp, destinationIp, sourcePort, destinationPort, status, packetCount, bytesTransferred } = req.body;
   if (!sourceDevice || !destinationDevice || !protocol || !sourceIp || !destinationIp) {
     return res.status(400).json({ error: "Missing required session fields" });
   }
-  const newSession: Session = {
+  const newSession = {
     id: `sess-${generateId()}`,
     sourceDevice: sanitizeString(sourceDevice),
     destinationDevice: sanitizeString(destinationDevice),
@@ -651,12 +619,10 @@ app.post("/api/sessions", requireAuth, (req, res) => {
   res.status(201).json(newSession);
 });
 
-// GET /api/alerts - Get all alerts
 app.get("/api/alerts", (req, res) => {
   res.json(alertsDb);
 });
 
-// GET /api/alerts/:id - Get alert by ID
 app.get("/api/alerts/:id", (req, res) => {
   const alert = alertsDb.find(a => a.id === req.params.id);
   if (!alert) {
@@ -665,13 +631,12 @@ app.get("/api/alerts/:id", (req, res) => {
   res.json(alert);
 });
 
-// POST /api/alerts - Create/Add alert
 app.post("/api/alerts", requireAuth, (req, res) => {
   const { type, severity, title, description, relatedSessionId } = req.body;
   if (!type || !severity || !title || !description) {
     return res.status(400).json({ error: "Missing required alert fields" });
   }
-  const newAlert: Alert = {
+  const newAlert = {
     id: `alt-${generateId()}`,
     type: sanitizeString(type),
     severity,
@@ -688,7 +653,6 @@ app.post("/api/alerts", requireAuth, (req, res) => {
   res.status(201).json(newAlert);
 });
 
-// POST /api/alerts/:id/acknowledge - Acknowledge alert
 app.post("/api/alerts/:id/acknowledge", requireAuth, (req, res) => {
   const alert = alertsDb.find(a => a.id === req.params.id);
   if (!alert) {
@@ -698,42 +662,36 @@ app.post("/api/alerts/:id/acknowledge", requireAuth, (req, res) => {
   res.json({ success: true, alert });
 });
 
-// POST /api/alerts/clear - Clear threat logs database
 app.post("/api/alerts/clear", requireAuth, (req, res) => {
   alertsDb = [];
   res.json({ success: true });
 });
 
-// GET /api/reports - Aggregated summary report data with support for query params
 app.get("/api/reports", (req, res) => {
   const { startDate, endDate, protocol, device } = req.query;
 
-  let startTs = startDate ? parseFloat(startDate as string) : 0;
-  let endTs = endDate ? parseFloat(endDate as string) : Math.floor(Date.now() / 1000);
+  let startTs = startDate ? parseFloat(startDate) : 0;
+  let endTs = endDate ? parseFloat(endDate) : Math.floor(Date.now() / 1000);
 
   let filteredPackets = [...packetsDb];
 
-  // Date range filter
   if (startDate || endDate) {
     filteredPackets = filteredPackets.filter(p => p.timestamp >= startTs && p.timestamp <= endTs);
   }
 
-  // Protocol filter
   if (protocol && protocol !== "ALL") {
-    filteredPackets = filteredPackets.filter(p => p.protocol.toUpperCase() === (protocol as string).toUpperCase());
+    filteredPackets = filteredPackets.filter(p => p.protocol.toUpperCase() === protocol.toUpperCase());
   }
 
-  // Device IP filter
   if (device) {
-    const devIp = device as string;
+    const devIp = device;
     filteredPackets = filteredPackets.filter(p => p.src_ip === devIp || p.dst_ip === devIp);
   }
 
-  // Aggregate metrics
   const totalPackets = filteredPackets.length;
   const totalBytes = filteredPackets.reduce((sum, p) => sum + p.size, 0);
 
-  const protocolMap: { [key: string]: number } = {};
+  const protocolMap = {};
   filteredPackets.forEach(p => {
     protocolMap[p.protocol] = (protocolMap[p.protocol] || 0) + 1;
   });
@@ -756,19 +714,18 @@ app.get("/api/reports", (req, res) => {
   });
 });
 
-// POST /api/ingest - Ingestion endpoint for uploaded PCAP or JSON metadata payloads
 app.post("/api/ingest", requireAuth, (req, res) => {
   const { packets, sessions, devices, alerts } = req.body;
   
-  let addedPackets: Packet[] = [];
-  let addedSessions: Session[] = [];
-  let addedDevices: Device[] = [];
-  let addedAlerts: Alert[] = [];
+  let addedPackets = [];
+  let addedSessions = [];
+  let addedDevices = [];
+  let addedAlerts = [];
 
   if (devices && Array.isArray(devices)) {
-    devices.forEach((d: any) => {
+    devices.forEach((d) => {
       if (d.hostname && d.ipAddress && d.macAddress) {
-        const newD: Device = {
+        const newD = {
           id: d.id || `dev-${generateId()}`,
           hostname: sanitizeString(d.hostname),
           ipAddress: sanitizeString(d.ipAddress),
@@ -786,9 +743,9 @@ app.post("/api/ingest", requireAuth, (req, res) => {
   }
 
   if (sessions && Array.isArray(sessions)) {
-    sessions.forEach((s: any) => {
+    sessions.forEach((s) => {
       if (s.sourceDevice && s.destinationDevice && s.protocol && s.sourceIp && s.destinationIp) {
-        const newS: Session = {
+        const newS = {
           id: s.id || `sess-${generateId()}`,
           sourceDevice: sanitizeString(s.sourceDevice),
           destinationDevice: sanitizeString(s.destinationDevice),
@@ -813,7 +770,7 @@ app.post("/api/ingest", requireAuth, (req, res) => {
   }
 
   if (packets && Array.isArray(packets)) {
-    packets.forEach((p: any) => {
+    packets.forEach((p) => {
       if (p.protocol && p.src_ip && p.dst_ip) {
         const storedP = addPacket({
           timestamp: p.timestamp || Date.now() / 1000,
@@ -834,9 +791,9 @@ app.post("/api/ingest", requireAuth, (req, res) => {
   }
 
   if (alerts && Array.isArray(alerts)) {
-    alerts.forEach((a: any) => {
+    alerts.forEach((a) => {
       if (a.type && a.severity && a.title && a.description) {
-        const newA: Alert = {
+        const newA = {
           id: a.id || `alt-${generateId()}`,
           type: sanitizeString(a.type),
           severity: a.severity,
@@ -867,13 +824,12 @@ app.post("/api/ingest", requireAuth, (req, res) => {
   });
 });
 
-// GET /api/packets - Paginated query for historical packets
 app.get("/api/packets", (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 100;
-  const offset = parseInt(req.query.offset as string) || 0;
-  const protocol = req.query.protocol as string;
-  const sessionId = req.query.sessionId as string;
-  const search = (req.query.search as string)?.toLowerCase();
+  const limit = parseInt(req.query.limit) || 100;
+  const offset = parseInt(req.query.offset) || 0;
+  const protocol = req.query.protocol;
+  const sessionId = req.query.sessionId;
+  const search = req.query.search?.toLowerCase();
 
   let filtered = [...packetsDb];
 
@@ -882,7 +838,6 @@ app.get("/api/packets", (req, res) => {
   }
 
   if (sessionId) {
-    // Attempt to match by matching IP/ports of corresponding session
     const session = sessionsDb.find(s => s.id === sessionId);
     if (session) {
       filtered = filtered.filter(p => 
@@ -912,13 +867,11 @@ app.get("/api/packets", (req, res) => {
   });
 });
 
-// POST /api/packets/clear - Clear capture database
 app.post("/api/packets/clear", requireAuth, (req, res) => {
   packetsDb = [];
   res.json({ success: true, message: "Logs cleared" });
 });
 
-// POST /api/capture/start - Start capture
 app.post("/api/capture/start", requireAuth, (req, res) => {
   const { interfaceName, mode } = req.body;
   
@@ -929,14 +882,13 @@ app.post("/api/capture/start", requireAuth, (req, res) => {
   if (state.captureMode === "simulation") {
     startSimulation();
   } else {
-    stopSimulation(); // Rely on external python agent streaming
+    stopSimulation();
   }
 
   broadcastStatus();
   res.json({ success: true, state });
 });
 
-// POST /api/capture/stop - Stop capture
 app.post("/api/capture/stop", requireAuth, (req, res) => {
   state.isCapturing = false;
   stopSimulation();
@@ -944,49 +896,42 @@ app.post("/api/capture/stop", requireAuth, (req, res) => {
   res.json({ success: true, state });
 });
 
-// GET /api/stats - Real-time stats calculations
 app.get("/api/stats", (req, res) => {
   const totalPackets = packetsDb.length;
   let totalBytes = 0;
 
-  const protocolMap = new Map<string, { count: number; bytes: number }>();
-  const sourceMap = new Map<string, { count: number; bytes: number }>();
-  const destMap = new Map<string, { count: number; bytes: number }>();
+  const protocolMap = new Map();
+  const sourceMap = new Map();
+  const destMap = new Map();
   
-  const buckets: { [key: string]: { bytes: number; packets: number } } = {};
+  const buckets = {};
   const nowSecs = Math.floor(Date.now() / 1000);
 
-  // Initialize last 6 buckets of 5 seconds each
   for (let idx = 5; idx >= 0; idx--) {
     const t = nowSecs - (idx * 5);
     const dateStr = new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     buckets[dateStr] = { bytes: 0, packets: 0 };
   }
 
-  // Single-pass loop to calculate all metrics
   packetsDb.forEach(p => {
     const size = p.size;
     totalBytes += size;
 
-    // Protocol breakdown
     const protoStat = protocolMap.get(p.protocol) || { count: 0, bytes: 0 };
     protoStat.count++;
     protoStat.bytes += size;
     protocolMap.set(p.protocol, protoStat);
 
-    // Top sources
     const srcStat = sourceMap.get(p.src_ip) || { count: 0, bytes: 0 };
     srcStat.count++;
     srcStat.bytes += size;
     sourceMap.set(p.src_ip, srcStat);
 
-    // Top destinations
     const dstStat = destMap.get(p.dst_ip) || { count: 0, bytes: 0 };
     dstStat.count++;
     dstStat.bytes += size;
     destMap.set(p.dst_ip, dstStat);
 
-    // Bandwidth over time buckets
     const pSecs = Math.floor(p.timestamp);
     const bucketSecs = pSecs - (pSecs % 5);
     const dateStr = new Date(bucketSecs * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -1018,7 +963,6 @@ app.get("/api/stats", (req, res) => {
     packets: val.packets
   }));
 
-  // Calculate current Rates (BPS / PPS) based on the last 5 seconds
   const currentIntervalBucket = bandwidthOverTime[bandwidthOverTime.length - 1];
   const packetsPerSecond = currentIntervalBucket ? Math.round(currentIntervalBucket.packets / 5) : 0;
   const bytesPerSecond = currentIntervalBucket ? Math.round(currentIntervalBucket.bytes / 5) : 0;
@@ -1035,16 +979,15 @@ app.get("/api/stats", (req, res) => {
   });
 });
 
-// GET /api/telemetry - Unified dashboard telemetry endpoint to prevent redundant polling
 app.get("/api/telemetry", (req, res) => {
   const totalPackets = packetsDb.length;
   let totalBytes = 0;
 
-  const protocolMap = new Map<string, { count: number; bytes: number }>();
-  const sourceMap = new Map<string, { count: number; bytes: number }>();
-  const destMap = new Map<string, { count: number; bytes: number }>();
+  const protocolMap = new Map();
+  const sourceMap = new Map();
+  const destMap = new Map();
   
-  const buckets: { [key: string]: { bytes: number; packets: number } } = {};
+  const buckets = {};
   const nowSecs = Math.floor(Date.now() / 1000);
 
   for (let idx = 5; idx >= 0; idx--) {
@@ -1134,20 +1077,16 @@ app.get("/api/telemetry", (req, res) => {
   });
 });
 
-// Kick off simulation immediately if we are in simulation mode
 startSimulation();
 
-// VITE MIDDLEWARE SETUP
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
-    // Development server with Vite Hot Module Replacement (though HMR is off, asset serving is handled)
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
-    // Serving built production resources
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {

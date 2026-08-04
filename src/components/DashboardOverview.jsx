@@ -1,24 +1,12 @@
 import { useMemo } from "react";
 import { 
-  Activity, Play, Square, ShieldAlert, Cpu, Network, Globe, 
-  ArrowDown, ArrowUp, CheckCircle2, ShieldCheck, Zap
+  Play, Square, ShieldAlert, Cpu, Network, Globe, 
+  ArrowDown, ArrowUp, ShieldCheck, Zap
 } from "lucide-react";
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, 
   PieChart, Pie, Cell, BarChart, Bar, CartesianGrid 
 } from "recharts";
-import { Packet, CaptureStats, ServerState, Alert, Session, Device } from "../types";
-
-interface DashboardOverviewProps {
-  packets: Packet[];
-  stats: CaptureStats | null;
-  serverState: ServerState;
-  onToggleCapture: () => void;
-  alerts: Alert[];
-  sessions: Session[];
-  devices: Device[];
-  onSelectPacket: (packet: Packet) => void;
-}
 
 const COLORS = [
   "#0d9488", // Teal
@@ -37,7 +25,7 @@ export default function DashboardOverview({
   alerts,
   sessions,
   devices
-}: DashboardOverviewProps) {
+}) {
 
   // Protocol distribution counts
   const protocolPieData = useMemo(() => {

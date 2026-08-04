@@ -3,34 +3,18 @@
  * Manages connections and handles streamed telemetry payload validation from authorized 
  * local capture agents (e.g. privileged Python + Scapy / Npcap script running outside the browser).
  */
-import { Packet } from "../../types.js";
-
-export interface AgentCredentials {
-  agentName: string;
-  secretToken: string;
-  authorizedSubnets: string[];
-}
-
-export interface AgentHeartbeat {
-  agentId: string;
-  activeInterfaces: string[];
-  cpuUsage: number;
-  memoryUsage: number;
-}
 
 /**
  * Validates the capture agent's security credentials and verifies its origin subnet.
  * 
- * TODO(agent): Integrate secure JWT or token authentication.
- * In a real production deployment:
- * 1. The agent initiates a WebSocket connection with an Authorization header/auth token.
- * 2. This helper decodes the token, validating against the active session/API keys database.
- * 3. Compares the remote socket IP address against the configured authorizedSubnets.
+ * @param {Object} credentials - Agent security credentials
+ * @param {string} credentials.agentName
+ * @param {string} credentials.secretToken
+ * @param {string[]} credentials.authorizedSubnets
+ * @param {string} remoteIpAddress
+ * @returns {boolean}
  */
-export function authenticateCaptureAgent(
-  credentials: AgentCredentials,
-  remoteIpAddress: string
-): boolean {
+export function authenticateCaptureAgent(credentials, remoteIpAddress) {
   console.log(`[Agent Service] Authenticating agent '${credentials.agentName}' from IP: ${remoteIpAddress}`);
   
   if (!credentials.secretToken || credentials.secretToken.length < 8) {
@@ -55,12 +39,10 @@ export function authenticateCaptureAgent(
 /**
  * Normalizes, validates, and stores incoming live-streamed packet packets.
  * 
- * TODO(backend): Real-time ingestion pipelines could forward to a fast queue (e.g., Redis / Kafka)
- * to prevent Event Loop blocks before inserting to the permanent database.
+ * @param {Object} rawPacket
+ * @returns {Object}
  */
-export function processAgentStreamedPacket(
-  rawPacket: any
-): Omit<Packet, "id"> {
+export function processAgentStreamedPacket(rawPacket) {
   // Validate schema at the boundary
   if (!rawPacket.protocol || !rawPacket.src_ip || !rawPacket.dst_ip) {
     throw new Error("Invalid streamed packet payload: missing core headers.");
